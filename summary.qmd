@@ -44,7 +44,7 @@ confusion_matrix <- function(data, actual, predicted,
     conf_mat({{predicted}}, {{actual}}, 
              dnn = c(actual_label, predicted_label))
   
-  test <- test$table |>
+  test$table |>
     as_tibble() |> 
     mutate(n = na_if(n, 0)) |> 
     ggplot(aes(.data[[predicted_label]], .data[[actual_label]], fill= n)) +
@@ -52,8 +52,7 @@ confusion_matrix <- function(data, actual, predicted,
     scale_fill_gradient(low="white", high="#009194", na.value="white") +
     labs(x = predicted_label, y = actual_label) +
     scale_x_discrete(guide = guide_axis(angle = 90))
-  
-  return(test)
+
 }
 
 ```
