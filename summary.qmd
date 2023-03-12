@@ -27,6 +27,35 @@ the_data <- read_excel("MASTER DATASET_fina.xlsx",
   mutate(across(everything(), ~ format(round(.x, 2), nsmall = 2))) |> 
   mutate(across(everything(), ~ na_if(.x, "  NA")))
 
+## simplified dataset
+
+four_data <- the_data |> 
+  mutate(across(everything(), ~ substr(.x, 1, 1)))
+
+## confusion matrix function
+
+confusion_matrix <- function(data, actual, predicted, 
+                             actual_label, predicted_label) {
+  
+  test <- data |> 
+    mutate(across(c({{actual}}, {{predicted}}),
+                  ~ factor(.x, levels = sort(
+                    unique(c({{actual}}, {{predicted}})))))) |>
+    conf_mat({{predicted}}, {{actual}}, 
+             dnn = c(actual_label, predicted_label))
+  
+  test <- test$table |>
+    as_tibble() |> 
+    mutate(n = na_if(n, 0)) |> 
+    ggplot(aes(.data[[predicted_label]], .data[[actual_label]], fill= n)) +
+    geom_tile() + geom_text(aes(label=n)) +
+    scale_fill_gradient(low="white", high="#009194", na.value="white") +
+    labs(x = predicted_label, y = actual_label) +
+    scale_x_discrete(guide = guide_axis(angle = 90))
+  
+  return(test)
+}
+
 ```
 
 ## Sankey diagrams
@@ -35,14 +64,13 @@ the_data <- read_excel("MASTER DATASET_fina.xlsx",
 
 ```{r}
 
-sankey_df <- the_data |> 
-  make_long(referral, psychology, final)
-
-ggplot(sankey_df, aes(x = x, 
-               next_x = next_x, 
-               node = node, 
-               next_node = next_node,
-               fill = factor(node))) +
+the_data |> 
+  make_long(referral, psychology, final) |> 
+  ggplot(aes(x = x, 
+             next_x = next_x, 
+             node = node, 
+             next_node = next_node,
+             fill = factor(node))) +
   geom_sankey() +
   theme_sankey(base_size = 16)
 
@@ -52,18 +80,13 @@ ggplot(sankey_df, aes(x = x,
 
 ```{r}
 
-four_data <- the_data |> 
-  mutate(across(everything(), ~ substr(.x, 1, 1)))
-  
-
-four_df <- four_data |> 
-  make_long(referral, psychology, final)
-
-ggplot(four_df, aes(x = x, 
-                      next_x = next_x, 
-                      node = node, 
-                      next_node = next_node,
-                      fill = factor(node))) +
+four_data |> 
+  make_long(referral, psychology, final) |> 
+  ggplot(aes(x = x, 
+             next_x = next_x, 
+             node = node, 
+             next_node = next_node,
+             fill = factor(node))) +
   geom_sankey() +
   theme_sankey(base_size = 16)
 
@@ -75,12 +98,10 @@ ggplot(four_df, aes(x = x,
 
 ```{r}
 
-four_data |> 
-  mutate(across(c(psychology, referral),
-                ~ factor(.x, levels = sort(unique(c(psychology, referral)))))) |>
-  conf_mat(referral, psychology, 
-           dnn = c("NPA", "Initial hypothesis")) |> 
-  autoplot(type = "heatmap")
+confusion_matrix(four_data, actual = psychology, 
+                 predicted = referral, 
+                 actual_label = "NPA", 
+                 predicted_label = "Initial hypothesis")
 
 ```
 
@@ -88,12 +109,10 @@ four_data |>
 
 ```{r}
 
-the_data |> 
-  mutate(across(c(psychology, referral), 
-                ~ factor(.x, levels = sort(unique(c(psychology, referral)))))) |> 
-  conf_mat(referral, psychology, 
-           dnn = c("NPA", "Initial hypothesis")) |> 
-  autoplot(type = "heatmap") + scale_x_discrete(guide = guide_axis(angle = 90))
+confusion_matrix(the_data, actual = psychology, 
+                 predicted = referral, 
+                 actual_label = "NPA", 
+                 predicted_label = "Initial hypothesis")
 
 ggsave("referral_psych.png")
 
@@ -106,11 +125,10 @@ ggsave("referral_psych.png")
 
 ```{r}
 
-four_data |> 
-  mutate(across(everything(), as.factor)) |> 
-  conf_mat(final, psychology, 
-           dnn = c("NPA", "Final diagnosis")) |> 
-  autoplot(type = "heatmap")
+confusion_matrix(four_data, actual = final, 
+                 predicted = psychology, 
+                 actual_label = "Final diagnosis", 
+                 predicted_label = "NPA")
 
 ```
 
@@ -118,12 +136,10 @@ four_data |>
 
 ```{r}
 
-the_data |> 
-  mutate(across(c(psychology, final), 
-                ~ factor(.x, levels = sort(unique(c(psychology, final)))))) |> 
-  conf_mat(final, psychology, 
-           dnn = c("NPA", "Final diagnosis")) |> 
-  autoplot(type = "heatmap") + scale_x_discrete(guide = guide_axis(angle = 90))
+confusion_matrix(the_data, actual = final, 
+                 predicted = psychology, 
+                 actual_label = "Final diagnosis", 
+                 predicted_label = "NPA")
 
 ggsave("psych_final.png")
 
