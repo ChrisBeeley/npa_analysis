@@ -1,0 +1,133 @@
+---
+title: "NPA analysis"
+format: 
+  html:
+    embed-resources: true
+execute:
+  echo: false
+  warning: false
+  messages: false
+---
+
+```{r}
+
+# remotes::install_github("davidsjoberg/ggsankey")
+
+library(readxl)
+library(dplyr)
+library(ggsankey)
+library(ggplot2)
+library(yardstick)
+
+the_data <- read_excel("MASTER DATASET_fina.xlsx", 
+                       na = c("n/a", "N/A", "None")) |> 
+  select(referral = "Referral hypothesis",
+         psychology = "Psychologist Interpretation",
+         final = "Mats Diagnosis after NPA coded") |> 
+  mutate(across(everything(), ~ format(round(.x, 2), nsmall = 2))) |> 
+  mutate(across(everything(), ~ na_if(.x, "  NA")))
+
+```
+
+## Sankey diagrams
+
+### All categories
+
+```{r}
+
+sankey_df <- the_data |> 
+  make_long(referral, psychology, final)
+
+ggplot(sankey_df, aes(x = x, 
+               next_x = next_x, 
+               node = node, 
+               next_node = next_node,
+               fill = factor(node))) +
+  geom_sankey() +
+  theme_sankey(base_size = 16)
+
+```
+
+### Four categories
+
+```{r}
+
+four_data <- the_data |> 
+  mutate(across(everything(), ~ substr(.x, 1, 1)))
+  
+
+four_df <- four_data |> 
+  make_long(referral, psychology, final)
+
+ggplot(four_df, aes(x = x, 
+                      next_x = next_x, 
+                      node = node, 
+                      next_node = next_node,
+                      fill = factor(node))) +
+  geom_sankey() +
+  theme_sankey(base_size = 16)
+
+```
+
+## Confusion matrix- referral to psychologist
+
+### Four categories
+
+```{r}
+
+four_data |> 
+  mutate(across(c(psychology, referral),
+                ~ factor(.x, levels = sort(unique(c(psychology, referral)))))) |>
+  conf_mat(referral, psychology, 
+           dnn = c("NPA", "Initial hypothesis")) |> 
+  autoplot(type = "heatmap")
+
+```
+
+### All categories
+
+```{r}
+
+the_data |> 
+  mutate(across(c(psychology, referral), 
+                ~ factor(.x, levels = sort(unique(c(psychology, referral)))))) |> 
+  conf_mat(referral, psychology, 
+           dnn = c("NPA", "Initial hypothesis")) |> 
+  autoplot(type = "heatmap") + scale_x_discrete(guide = guide_axis(angle = 90))
+
+ggsave("referral_psych.png")
+
+```
+
+
+## Confusion matrix- psychology to final
+
+### Four categories
+
+```{r}
+
+four_data |> 
+  mutate(across(everything(), as.factor)) |> 
+  conf_mat(final, psychology, 
+           dnn = c("NPA", "Final diagnosis")) |> 
+  autoplot(type = "heatmap")
+
+```
+
+### All categories
+
+```{r}
+
+the_data |> 
+  mutate(across(c(psychology, final), 
+                ~ factor(.x, levels = sort(unique(c(psychology, final)))))) |> 
+  conf_mat(final, psychology, 
+           dnn = c("NPA", "Final diagnosis")) |> 
+  autoplot(type = "heatmap") + scale_x_discrete(guide = guide_axis(angle = 90))
+
+ggsave("psych_final.png")
+
+```
+
+
+
