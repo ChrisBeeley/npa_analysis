@@ -32,6 +32,37 @@ the_data <- read_excel("MASTER DATASET_fina.xlsx",
 four_data <- the_data |> 
   mutate(across(everything(), ~ substr(.x, 1, 1)))
 
+the_data <- the_data |> 
+  mutate(across(everything(), ~ case_when(
+    .x == "1.00" ~ "1none",
+    .x == "2.01" ~ "2Unspec",
+    .x == "2.02" ~ "2AD",
+    .x == "2.03" ~ "2AtypAD",
+    .x == "2.04" ~ "2Va",
+    .x == "2.06" ~ "2svFTD",
+    .x == "2.12" ~ "2Alco",
+    .x == "2.13" ~ "2multi",
+    .x == "3.01" ~ "3Unspec",
+    .x == "3.02" ~ "3AD",
+    .x == "3.03" ~ "3AtypAD",
+    .x == "3.04" ~ "3Va",
+    .x == "3.05" ~ "3fvFTD",
+    .x == "3.06" ~ "3svFTD",
+    .x == "3.07" ~ "3LBD",
+    .x == "3.09" ~ "3PNFA",
+    .x == "3.10" ~ "3Logop",
+    .x == "3.12" ~ "3Alco",
+    .x == "3.13" ~ "3PSP",
+    .x == "3.14" ~ "3other",
+    .x == "4.02" ~ "4Anx",
+    .x == "4.03" ~ "4Dep",
+    .x == "4.04" ~ "4OthPsych",
+    .x == "4.05" ~ "4stress",
+    .x == "4.06" ~ "4Pain",
+    .x == "4.08" ~ "4sensory",
+    .x == "4.09" ~ "4multi"
+  )))
+
 ## confusion matrix function
 
 confusion_matrix <- function(data, actual, predicted, 
@@ -45,14 +76,17 @@ confusion_matrix <- function(data, actual, predicted,
              dnn = c(actual_label, predicted_label))
   
   test$table |>
-    as_tibble() |> 
-    mutate(n = na_if(n, 0)) |> 
+    as_tibble() |>
+    mutate(n = na_if(n, 0)) |>
     ggplot(aes(.data[[predicted_label]], .data[[actual_label]], fill= n)) +
-    geom_tile() + geom_text(aes(label=n)) +
-    scale_fill_gradient(low="white", high="#009194", na.value="white") +
+    geom_tile() + geom_text(aes(label= n)) +
+    scale_fill_gradient(low="white", high="#009194", na.value="white",
+                        breaks = ~unique(round(pretty(.)))) +
     labs(x = predicted_label, y = actual_label) +
-    scale_x_discrete(guide = guide_axis(angle = 90))
+    scale_x_discrete(guide = guide_axis(angle = 90)) + 
+    geom_abline(intercept = 0, slope = 1, linetype="dotted")
 
+  
 }
 
 ```
@@ -99,7 +133,7 @@ four_data |>
 
 confusion_matrix(four_data, actual = psychology, 
                  predicted = referral, 
-                 actual_label = "NPA", 
+                 actual_label = "NPA finding", 
                  predicted_label = "Initial hypothesis")
 
 ```
@@ -110,7 +144,7 @@ confusion_matrix(four_data, actual = psychology,
 
 confusion_matrix(the_data, actual = psychology, 
                  predicted = referral, 
-                 actual_label = "NPA", 
+                 actual_label = "NPA finding", 
                  predicted_label = "Initial hypothesis")
 
 ggsave("referral_psych.png")
@@ -126,8 +160,8 @@ ggsave("referral_psych.png")
 
 confusion_matrix(four_data, actual = final, 
                  predicted = psychology, 
-                 actual_label = "Final diagnosis", 
-                 predicted_label = "NPA")
+                 actual_label = "Diagnosis after NPA", 
+                 predicted_label = "NPA finding")
 
 ```
 
@@ -137,8 +171,8 @@ confusion_matrix(four_data, actual = final,
 
 confusion_matrix(the_data, actual = final, 
                  predicted = psychology, 
-                 actual_label = "Final diagnosis", 
-                 predicted_label = "NPA")
+                 actual_label = "Diagnosis after NPA", 
+                 predicted_label = "NPA finding")
 
 ggsave("psych_final.png")
 
